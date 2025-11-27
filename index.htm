@@ -216,19 +216,18 @@
         init();
 
         function init() {
-            const container = document.getElementById('viewport');
+            const container = document.getElementById('viewport');
 
-            scene = new THREE.Scene();
-            
-            // ⭐ 修正：將 Three.js 場景背景設為 null，使 WebGL Renderer 的 alpha (透明度) 生效，
-            // 這樣父頁面 (Wix) 的背景就能透過 3D 畫布看到。
-            scene.background = null; 
+            scene = new THREE.Scene();
+            
+            // ⭐ 修正：將 Three.js 場景背景設為 null，使 WebGL Renderer 的 alpha (透明度) 生效，
+            // 這樣父頁面 (Wix) 的背景就能透過 3D 畫布看到。
+            scene.background = null; 
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+            camera.position.set(0, 0, 40); // 保留攝影機初始位置
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000); // 調整 near/far plane
-            camera.position.set(0, 0, 40);
-
+           
             renderer = new THREE.WebGLRenderer({ 
                 antialias: true, 
                 alpha: true,
