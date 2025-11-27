@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DUET - Final Soft Edge (已修正)</title>
+    <style>
+        /* 1. UI & Style: 完全保留 */
+        body {
+    margin: 0; overflow: hidden;
+    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    /* ⭐ 修正背景：深灰藍色徑向漸層，高對比度且保留細節 ⭐ */
+    background: radial-gradient(circle at 50% 50%, #1c232f 0%, #0a0e14 75%, #000000 100%);
+    color: #fff;
+}
+
+        #ui-panel {
+            position: absolute; top: 20px; left: 20px;
+            width: 220px; max-height: 92vh; overflow-y: auto;
+            background: rgba(12, 12, 12, 0.9);
+            padding: 18px; border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px); z-index: 100;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+        }
+        #ui-panel::-webkit-scrollbar { width: 4px; }
+        #ui-panel::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        h2 { margin: 0 0 20px 0; font-size: 14px; text-align: center; border-bottom: 1px solid #d4af37; padding-bottom: 10px; letter-spacing: 3px; color: #fff; font-weight: 300; }
+        h2 span { display: block; font-size: 9px; color: #777; margin-top: 4px; letter-spacing: 1px; }
+
+        .divider { height: 1px; background: #333; margin: 15px 0; }
+        .section-title { font-size: 10px; color: #d4af37; margin-bottom: 8px; letter-spacing: 1px; font-weight: bold; }
+
+        .control-group { margin-bottom: 12px; }
+        label { display: block; font-size: 9px; color: #999; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        input[type="text"], select {
+            width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.05);
+            border: 1px solid #333; color: #eee; padding: 8px;
+            border-radius: 2px; font-size: 11px; outline: none; transition: 0.3s;
+        }
+        input:focus, select:focus { border-color: #d4af37; background: rgba(255,255,255,0.1); }
+        .letter-input { text-align: center; font-weight: bold; font-size: 16px; text-transform: uppercase; color: #fff; letter-spacing: 2px; }
+        
+        input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 8px 0; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: #d4af37; cursor: pointer; margin-top: -5px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; cursor: pointer; background: #444; }
+
+        .flex-row { display: flex; gap: 10px; }
+        
+        button {
+            width: 100%; padding: 12px; border: none; border-radius: 2px;
+            font-weight: 600; cursor: pointer; margin-top: 5px;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s;
+        }
+        #generateBtn { background: linear-gradient(135deg, #d4af37, #aa8a2e); color: #000; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15); }
+        #generateBtn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        #exportBtn { background: transparent; color: #777; border: 1px solid #444; margin-top: 15px; }
+        #exportBtn:hover { border-color: #bbb; color: #fff; background: rgba(255,255,255,0.05); }
+
+        #price-display { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #333; }
+        .total { color: #d4af37; font-size: 18px; text-align: right; font-weight: 400; margin-top: 5px; }
+        .total span { font-size: 9px; color: #555; font-weight: normal; display: block; margin-bottom: 2px;}
+
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .spinner { width: 40px; height: 40px; border: 1px solid #333; border-top: 1px solid #d4af37; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #loading-text { color: #555; font-size: 10px; letter-spacing: 3px; font-family: monospace; }
+        
+        #viewport { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        
+        #badge {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0,0,0,0.6); color: #d4af37;
+            padding: 5px 12px; border-radius: 20px; font-size: 10px;
+            display: none; border: 1px solid #d4af37; letter-spacing: 1px; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <div id="loading-text">LOADING STUDIO...</div>
+    </div>
+    <div id="badge">UPDATING...</div>
+
+    <div id="viewport"></div>
+
+    <div id="ui-panel">
+        <h2>DUET <span>By BCAG</span></h2>
+        
+        <div class="control-group">
+            <div class="flex-row">
+                <div style="flex: 1;"><label>Front</label><input type="text" id="letter1" value="R" maxlength="1" class="letter-input"></div>
+                <div style="flex: 2;"><label>Font</label><select id="font1"></select></div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="flex-row">
+                <div style="flex: 1;"><label>Side</label><input type="text" id="letter2" value="K" maxlength="1" class="letter-input"></div>
+                <div style="flex: 2;"><label>Font</label><select id="font2"></select></div>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Material</label>
+            <select id="materialType">
+                <option value="gold18k">18K Yellow Gold</option>
+                <option value="rosegold">18K Rose Gold</option>
+                <option value="silver">925 Sterling Silver</option>
+                <option value="platinum">Platinum PT950</option>
+                <option value="white18k">18K White Gold</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>Size (Height)</label>
+            <select id="pendantSize">
+                <option value="15">15 mm (Petite)</option>
+                <option value="20" selected>20 mm (Standard)</option>
+                <option value="25">25 mm (Grand)</option>
+                <option value="30">30 mm (Statement)</option>
+            </select>
+        </div>
+
+        <button id="generateBtn">預覽作品</button>
+
+        <div class="divider"></div>
+        <div class="section-title">BAIL ADJUSTMENT (墜頭微調)</div>
+
+        <div class="control-group"><label>Position X</label><input type="range" id="bailX" min="-15" max="15" step="0.1" value="0"></div>
+        <div class="control-group"><label>Position Y (Height)</label><input type="range" id="bailY" min="-10" max="10" step="0.1" value="0"></div>
+        <div class="control-group"><label>Position Z</label><input type="range" id="bailZ" min="-15" max="15" step="0.1" value="0"></div>
+        <div class="divider"></div>
+
+        <div class="control-group">
+            <label>環境光源亮度</label>
+            <input type="range" id="envInput" min="0" max="3" step="0.1" value="0.6">
+        </div>
+
+
+
+        <div id="price-display">
+            <div class="total"><span>ESTIMATED PRICE</span> <div id="price-val">--</div></div>
+        </div>
+
+        <button id="exportBtn">Download Production STL</button>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://esm.sh/three@0.160.0",
+            "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
+            "three-mesh-bvh": "https://esm.sh/three-mesh-bvh@0.7.3",
+            "three-bvh-csg": "https://esm.sh/three-bvh-csg@0.0.16?deps=three@0.160.0,three-mesh-bvh@0.7.3"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+        import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+        import { Evaluator, Brush, INTERSECTION } from 'three-bvh-csg';
+
+        let scene, camera, renderer, controls, envMap;
+        let mainMesh = null, bailMesh = null;
+        let modelCenter = new THREE.Vector3();
+        let modelTopY = 0;
+        let isFirstInit = true;
+        let debounceTimer;
+
+        const loaderEl = document.getElementById('loader');
+        const loadText = document.getElementById('loading-text');
+        const badgeEl = document.getElementById('badge');
+
+        // 字體 (12種 - 新增兩種)
+        const fontList = [
+            { name: "Modern Sans (Bold)", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json" },
+            { name: "Classic Serif (Bold)", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/droid/droid_serif_bold.typeface.json" },
+            { name: "Elegant Serif", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/optimer_regular.typeface.json" },
+            { name: "Geometric", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/gentilis_bold.typeface.json" },
+            { name: "Technical", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/droid/droid_sans_mono_regular.typeface.json" },
+            { name: "Soft Rounded", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_regular.typeface.json" },
+            { name: "Luxury", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/optimer_bold.typeface.json" },
+            { name: "Minimalist", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/gentilis_regular.typeface.json" },
+            { name: "Editorial", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/droid/droid_serif_regular.typeface.json" },
+            { name: "Industrial", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/droid/droid_sans_bold.typeface.json" },
+            { name: "Bubble Round (圓潤)", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_regular.typeface.json" },
+            { name: "Gothic Bold (哥德粗體)", url: "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/gentilis_bold.typeface.json" }
+        ];
+        const loadedFonts = {};
+
+        // 材質
+        const MATERIALS = {
+            silver: { color: 0xFFFFFF, metalness: 1.0, roughness: 0.0, boost: 1.5 },
+            white18k: { color: 0xE8E8E8, metalness: 1.0, roughness: 0.05, boost: 1.3 },
+            gold18k: { color: 0xFFE57C, metalness: 1.0, roughness: 0.0, boost: 1.0 },
+            rosegold: { color: 0xFAB094, metalness: 1.0, roughness: 0.0, boost: 1.0 },
+            platinum: { color: 0xAAAAAA, metalness: 1.0, roughness: 0.1, boost: 1.4 }
+        };
+        
+        const UI_WIDTH = 220;
+
+        init();
+
+        function init() {
+            const container = document.getElementById('viewport');
+
+            scene = new THREE.Scene();
+            
+            // ⭐ 修正背景：高對比度的深色徑向漸層 (使用深藍灰色調，避免純黑反射)
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            // 使用居中對稱的徑向漸層
+            const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 512);
+            // 使用深藍灰色調，避免純黑反射
+            gradient.addColorStop(0, '#282c35'); // 柔和深藍灰中心 (提供環境光細節)
+            gradient.addColorStop(0.5, '#14161a'); // 略暗
+            gradient.addColorStop(1, '#080808'); // 極暗邊緣
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 512, 512);
+            
+            const bgTexture = new THREE.CanvasTexture(canvas);
+            scene.background = bgTexture;
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000); // 調整 near/far plane
+            camera.position.set(0, 0, 40);
+
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true,
+                logarithmicDepthBuffer: true // 改善深度精度，減少 Z-fighting
+            });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 限制最高 2x，避免過度渲染
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
+            container.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            // 載入 HDRI
+            const hdriUrl = 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_09_1k.hdr';
+            
+            new RGBELoader().load(hdriUrl, (texture) => {
+                texture.mapping = THREE.EquirectangularReflectionMapping;
+                scene.environment = texture;
+                envMap = texture;
+                
+                initUI();
+                loadFonts();
+            }, undefined, (err) => {
+                console.error("HDRI Error", err);
+                document.getElementById('loader').innerText = "HDRI ERROR. Please reload.";
+            });
+
+            // 事件監聽
+            document.getElementById('generateBtn').addEventListener('click', generateAmbigram);
+            document.getElementById('materialType').addEventListener('change', () => { updateMaterial(); calculatePrice(); });
+            document.getElementById('envInput').addEventListener('input', updateMaterial);
+            
+            ['bailX', 'bailY', 'bailZ'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateBailPosition);
+            });
+
+            ['letter1', 'letter2', 'font1', 'font2', 'pendantSize'].forEach(id => {
+                const el = document.getElementById(id);
+                const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+                el.addEventListener(evt, () => {
+                    document.getElementById('badge').style.display = 'block';
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(generateAmbigram, 800);
+                });
+            });
+
+            window.addEventListener('resize', onResize);
+            animate();
+        }
+
+        function initUI() {
+            const f1 = document.getElementById('font1');
+            const f2 = document.getElementById('font2');
+            fontList.forEach((f, idx) => {
+                f1.add(new Option(f.name, idx));
+                f2.add(new Option(f.name, idx));
+            });
+            f2.selectedIndex = 1;
+        }
+
+        function loadFonts() {
+            const loader = new FontLoader();
+            let loaded = 0;
+            fontList.forEach((fontData, idx) => {
+                loader.load(fontData.url, (f) => {
+                    loadedFonts[idx] = f;
+                    loaded++;
+                    if (loaded === fontList.length) {
+                        document.getElementById('loader').style.display = 'none';
+                        generateAmbigram();
+                    }
+                });
+            });
+        }
+
+        async function generateAmbigram() {
+            const l1 = document.getElementById('letter1').value.toUpperCase() || 'A';
+            const l2 = document.getElementById('letter2').value.toUpperCase() || 'B';
+            const f1 = loadedFonts[document.getElementById('font1').value];
+            const f2 = loadedFonts[document.getElementById('font2').value];
+            const targetHeight = parseInt(document.getElementById('pendantSize').value); // 目標高度
+
+            if(mainMesh) { scene.remove(mainMesh); mainMesh.geometry.dispose(); }
+            if(bailMesh) { scene.remove(bailMesh); bailMesh.geometry.dispose(); }
+
+            const evaluator = new Evaluator();
+            const baseMat = new THREE.MeshStandardMaterial();
+
+            const depth = targetHeight * 5.0;
+            const params = {
+                font: null, 
+                size: 50, // 使用固定大小生成，之後再縮放
+                height: depth,
+                curveSegments: 24,
+                bevelEnabled: true,
+                bevelThickness: 1.5,
+                bevelSize: 0.6,
+                bevelSegments: 12
+            };
+
+            // === 字母 1：生成、計算高度、縮放到目標高度 ===
+            const geo1 = new TextGeometry(l1, { ...params, font: f1 });
+            geo1.computeBoundingBox();
+            const bbox1 = geo1.boundingBox;
+            const actualHeight1 = bbox1.max.y - bbox1.min.y;
+            const scale1 = targetHeight / actualHeight1; // 計算縮放比例
+            geo1.scale(scale1, scale1, scale1); // 統一縮放
+            geo1.center(); // 重新置中
+            
+            const brush1 = new Brush(geo1, baseMat);
+            brush1.updateMatrixWorld();
+
+            // === 字母 2：生成、計算高度、縮放到目標高度 ===
+            const geo2 = new TextGeometry(l2, { ...params, font: f2 });
+            geo2.computeBoundingBox();
+            const bbox2 = geo2.boundingBox;
+            const actualHeight2 = bbox2.max.y - bbox2.min.y;
+            const scale2 = targetHeight / actualHeight2; // 計算縮放比例
+            geo2.scale(scale2, scale2, scale2); // 統一縮放
+            geo2.center(); // 重新置中
+            geo2.rotateY(Math.PI / 2); // 旋轉 90 度
+            
+            const brush2 = new Brush(geo2, baseMat);
+            brush2.updateMatrixWorld();
+
+            let result = evaluator.evaluate(brush1, brush2, INTERSECTION);
+            
+            if (result.geometry.attributes.position.count === 0) {
+                document.getElementById('badge').style.display = 'none';
+                return;
+            }
+
+            // === 修復幾何體問題 ===
+            // 1. 合併相近的頂點，減少浮點誤差
+            result.geometry = result.geometry.toNonIndexed();
+            
+            // 2. 清理並重新計算法線
+            result.geometry.deleteAttribute('normal');
+            result.geometry.computeVertexNormals();
+            
+            // 3. 稍微偏移幾何體，避免完全重疊的面
+            const offset = 0.001; // 微小偏移
+            const positions = result.geometry.attributes.position;
+            const normals = result.geometry.attributes.normal;
+            
+            for (let i = 0; i < positions.count; i++) {
+                const nx = normals.getX(i);
+                const ny = normals.getY(i);
+                const nz = normals.getZ(i);
+                
+                positions.setXYZ(
+                    i,
+                    positions.getX(i) + nx * offset,
+                    positions.getY(i) + ny * offset,
+                    positions.getZ(i) + nz * offset
+                );
+            }
+            positions.needsUpdate = true;
+
+            result.geometry.computeBoundingBox();
+            const bbox = result.geometry.boundingBox;
+            modelTopY = bbox.max.y;
+            modelCenter.copy(bbox.getCenter(new THREE.Vector3()));
+
+            mainMesh = result;
+            scene.add(mainMesh);
+
+            createBail(targetHeight);
+            updateMaterial();
+
+            if (isFirstInit) {
+                const dist = 100;
+                const ratioX = 1.0; 
+                const ratioY = 0.4;
+                const ratioZ = 1.0; 
+                const totalRatio = Math.sqrt(ratioX * ratioX + ratioY * ratioY + ratioZ * ratioZ);
+                const scaleFactor = dist / totalRatio; 
+                
+                controls.target.copy(modelCenter);
+                camera.position.set(
+                    modelCenter.x + ratioX * scaleFactor,
+                    modelCenter.y + ratioY * scaleFactor,
+                    modelCenter.z + ratioZ * scaleFactor
+                );
+                camera.lookAt(modelCenter);
+                isFirstInit = false;
+            }
+
+            updateCameraLayout();
+            calculatePrice();
+            document.getElementById('badge').style.display = 'none';
+        }
+
+        function createBail(size) {
+            const r = size * 0.15;
+            const tube = size * 0.03;
+            const geo = new THREE.TorusGeometry(r, tube, 16, 32);
+            geo.rotateY(Math.PI / 2);
+            
+            bailMesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial());
+            scene.add(bailMesh);
+            
+            updateBailPosition();
+        }
+
+        function updateBailPosition() {
+            if(!bailMesh) return;
+            const x = parseFloat(document.getElementById('bailX').value);
+            const y = parseFloat(document.getElementById('bailY').value);
+            const z = parseFloat(document.getElementById('bailZ').value);
+            
+            const baseY = modelTopY + 2.0;
+            bailMesh.position.set(modelCenter.x + x, baseY + y, modelCenter.z + z);
+        }
+        
+        function updateCameraLayout() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            if(w > UI_WIDTH * 2) {
+                camera.setViewOffset(w, h, -(UI_WIDTH/2), 0, w, h);
+            } else {
+                camera.clearViewOffset();
+            }
+        }
+
+        function updateMaterial() {
+            if (!mainMesh) return;
+            const type = document.getElementById('materialType').value;
+            const baseInt = parseFloat(document.getElementById('envInput').value);
+            const data = MATERIALS[type];
+            const finalIntensity = baseInt * data.boost;
+
+            const mat = new THREE.MeshStandardMaterial({
+                color: data.color,
+                metalness: data.metalness,
+                roughness: data.roughness,
+                envMap: envMap,
+                envMapIntensity: finalIntensity,
+                side: THREE.FrontSide,
+                flatShading: false,
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
+            });
+
+            mainMesh.material = mat;
+            if(bailMesh) bailMesh.material = mat;
+        }
+
+        function calculatePrice() {
+            if (!mainMesh) return;
+            let vol = 0;
+            const pos = mainMesh.geometry.attributes.position;
+            const p1 = new THREE.Vector3(), p2 = new THREE.Vector3(), p3 = new THREE.Vector3();
+            for (let i = 0; i < pos.count; i += 3) {
+                p1.fromBufferAttribute(pos, i); p2.fromBufferAttribute(pos, i+1); p3.fromBufferAttribute(pos, i+2);
+                vol += p1.dot(p2.cross(p3)) / 6.0;
+            }
+            vol = Math.abs(vol);
+            
+            const price = vol * 10;
+            document.getElementById('price-val').innerText = 'NT$ ' + Math.ceil(price).toLocaleString();
+        }
+
+        function onResize() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+            updateCameraLayout();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            if(!mainMesh) return;
+            const exporter = new STLExporter();
+            const exportScene = new THREE.Scene();
+            exportScene.add(mainMesh.clone());
+            if(bailMesh) exportScene.add(bailMesh.clone());
+            
+            const result = exporter.parse(exportScene, { binary: true });
+            const blob = new Blob([result], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'DUET_design.stl';
+            link.click();
+        });
+    </script>
+</body>
+</html>
