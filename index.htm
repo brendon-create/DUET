@@ -9,8 +9,8 @@
         body {
     margin: 0; overflow: hidden;
     font-family: "Segoe UI", "Helvetica Neue", sans-serif;
-    /* ⭐ 修正：將背景設為透明，讓 Wix 網站的背景透出 ⭐ */
-    background: transparent !important; 
+    /* ⭐ 修正背景：深灰藍色徑向漸層，高對比度且保留細節 ⭐ */
+    background: radial-gradient(circle at 50% 50%, #1c232f 0%, #0a0e14 75%, #000000 100%);
     color: #fff;
 }
 
@@ -216,18 +216,30 @@
         init();
 
         function init() {
-            const container = document.getElementById('viewport');
+            const container = document.getElementById('viewport');
 
-            scene = new THREE.Scene();
-            
-            // ⭐ 修正：將 Three.js 場景背景設為 null，使 WebGL Renderer 的 alpha (透明度) 生效，
-            // 這樣父頁面 (Wix) 的背景就能透過 3D 畫布看到。
-            scene.background = null; 
+            scene = new THREE.Scene();
+            
+            // ⭐ 修正背景：高對比度的深色徑向漸層 (使用深藍灰色調，避免純黑反射)
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            // 使用居中對稱的徑向漸層
+            const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 512);
+            // 使用深藍灰色調，避免純黑反射
+            gradient.addColorStop(0, '#282c35'); // 柔和深藍灰中心 (提供環境光細節)
+            gradient.addColorStop(0.5, '#14161a'); // 略暗
+            gradient.addColorStop(1, '#080808'); // 極暗邊緣
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 512, 512);
+            
+            const bgTexture = new THREE.CanvasTexture(canvas);
+            scene.background = bgTexture;
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
-            camera.position.set(0, 0, 40); // 保留攝影機初始位置
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000); // 調整 near/far plane
+            camera.position.set(0, 0, 40);
 
-           
             renderer = new THREE.WebGLRenderer({ 
                 antialias: true, 
                 alpha: true,
