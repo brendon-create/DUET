@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DUET by BCAG - Font Selector</title>
+    <style>
+        /* --- 基礎設定 & 紙張質感 --- */
+        :root {
+            --paper-color: #fdfbf7;
+            --text-color: #1a1a1a;
+            --accent-color: #000;
+            --border-color: #dcdad5;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            background-color: var(--paper-color);
+            color: var(--text-color);
+            /* 模擬水彩紙的粗糙紋理 */
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 防止整個頁面捲動 */
+        }
+
+        /* --- Header --- */
+        header {
+            text-align: center;
+            padding: 20px 0 10px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            line-height: 1.2;
+            font-weight: normal;
+        }
+
+        .title-duet {
+            font-family: 'Helvetica', sans-serif; /* 模擬 DUET 粗體 */
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+
+        .title-bcag {
+            font-family: "Big Caslon", "Book Antiqua", "Palatino Linotype", serif;
+            font-weight: 400;
+            font-size: 1.25rem; /* 2.5rem 的一半 */
+        }
+
+        .subtitle {
+            font-family: 'Helvetica', sans-serif;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #555;
+        }
+
+        /* --- 主要佈局 --- */
+        main {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 120px); /* 扣除 Header 高度 */
+            overflow: hidden;
+        }
+
+        /* --- 左側控制區 --- */
+        #sidebar {
+            width: 20%;
+            min-width: 200px; 
+            background-color: rgba(255, 255, 255, 0.4);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px; 
+            box-sizing: border-box;
+        }
+
+        .input-group {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        #char-input {
+            /* 字體尺寸已縮小到 1.0rem */
+            font-size: 1.0rem;
+            width: 90%;
+            padding: 5px;
+            text-align: center;
+            border: 1px solid #aaa;
+            background: transparent;
+            font-family: 'Helvetica', sans-serif;
+            text-transform: none;
+        }
+
+        /* 新增：全選/全部取消 區塊樣式 */
+        .all-select-group {
+            padding: 10px 0; 
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            font-size: 0.6rem; 
+        }
+        #select-all-checkbox {
+            margin-right: 8px;
+            margin-left: 5px;
+            transform: scale(1.1);
+            cursor: pointer;
+        }
+
+        #font-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 10px;
+        }
+
+        .font-list-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 3px;
+            border-bottom: 1px solid rgba(0,0,0,0.03);
+            cursor: pointer;
+        }
+
+        .font-list-item:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+
+        .font-list-item input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.1);
+            cursor: pointer;
+        }
+
+        .font-list-item span {
+            font-size: 0.9rem; 
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .grayed-checkbox {
+            filter: grayscale(100%);
+            opacity: 0.5;
+            transition: all 0.2s;
+        }
+
+        /* --- 右側展示區 --- */
+        #display-area {
+            width: 80%; 
+            padding: 20px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            grid-auto-rows: 100px;
+            gap: 15px;
+            box-sizing: border-box;
+            align-content: start;
+        }
+
+        .preview-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        /* 淡化效果 */
+        .preview-card.disabled {
+            opacity: 0.15;
+            filter: grayscale(100%);
+        }
+
+        .preview-checkbox {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: scale(1.1);
+            cursor: pointer;
+        }
+
+        .preview-char {
+            font-size: 2.5rem;
+            line-height: 1.1;
+            margin-bottom: 5px;
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .preview-name {
+            font-size: 0.7rem;
+            color: #666;
+            font-family: 'Helvetica', sans-serif;
+            text-align: center;
+            margin-top: 5px;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* --- 確認按鈕 --- */
+        #confirm-container {
+            position: fixed;
+            bottom: 30px;
+            right: 40px;
+            z-index: 100;
+        }
+
+        #confirm-btn {
+            background-color: #000;
+            color: #fff;
+            border: none;
+            /* ⭐ 修正點: 尺寸縮小為一半 (1.5vw -> 0.75vw, 3vw -> 1.5vw) ⭐ */
+            padding: 0.75vw 1.5vw; 
+            /* ⭐ 修正點: 字體相對應縮小為一半 (1.2vw -> 0.6vw) ⭐ */
+            font-size: 0.6vw; 
+            
+            font-family: 'Helvetica', sans-serif;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s, background-color 0.2s;
+            border-radius: 5px; 
+        }
+
+        #confirm-btn:hover {
+            background-color: #333;
+            transform: translateY(-2px);
+        }
+
+        #confirm-btn:active {
+            transform: translateY(0);
+        }
+
+        /* 響應式調整 */
+        @media (max-width: 768px) {
+            main {
+                flex-direction: column;
+                height: auto;
+                overflow: visible;
+            }
+            #sidebar {
+                width: 100%;
+                height: 300px;
+                min-width: unset;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            #display-area {
+                width: 100%;
+                height: auto;
+            }
+            body {
+                overflow: auto;
+                height: auto;
+            }
+            #confirm-container {
+                bottom: 20px;
+                right: 20px;
+            }
+            /* ⭐ 修正點: 手機版尺寸也相應縮小 ⭐ */
+            #confirm-btn {
+                padding: 6px 12px; 
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1><span class="title-duet">DUET</span> <span class="title-bcag">by BCAG</span></h1>
+        <div class="subtitle">Manual Font selector</div>
+    </header>
+
+    <main>
+        <aside id="sidebar">
+            <div class="input-group">
+                <input type="text" id="char-input" value="" maxlength="2" placeholder="Type 1 or 2 letters">
+            </div>
+            
+            <div class="all-select-group">
+                <input type="checkbox" id="select-all-checkbox">
+                <label for="select-all-checkbox">全選 / 全部取消</label>
+            </div>
+
+            <div id="font-list-container">
+                <div style="text-align:center; color:#999; padding:20px;">Loading Fonts...</div>
+            </div>
+        </aside>
+
+        <section id="display-area">
+            </section>
+    </main>
+
+    <div id="confirm-container">
+        <button id="confirm-btn">Confirm selection</button>
+    </div>
+
+    <script>
+        const fonts = [
+            // 1. 經典/高對比襯線體 (Serif - Classic/Display)
+            "Playfair Display", "Cinzel", "Bodoni Moda", "Libre Baskerville", "Cormorant Garamond", 
+            "EB Garamond", "Taviraj", "Yeseva One", "Caudex", "Prata",
+            "Spectral", "Alegreya", "Vollkorn", "Philosopher", "Marcellus",
+            "Forum", "Sorts Mill Goudy", "Castoro", "Stint Ultra Expanded", "BioRhyme Expanded",
+
+            // 2. 幾何/人文/科技無襯線體 (Sans Serif - Distinct)
+            "Roboto", "Inter", "Gabarito", "Lexend", "Space Grotesk", 
+            "Quicksand", "Work Sans", "Barlow", "Kanit", "Bebas Neue",
+            "Anton", "Fjalla One", "Josefin Sans", "Spline Sans Mono", "Staatliches",
+            "Oswald", "Ruwudu", "Chakra Petch", "Exo 2", "Rajdhani",
+
+            // 3. 粗襯線體 / 復古 / 趣味顯示 (Slab / Retro / Display)
+            "Abril Fatface", "Alfa Slab One", "Zilla Slab", "Rokkitt", "BioRhyme",
+            "Righteous", "Bungee", "Plaster", "Ultra", "Metal Mania", 
+            "Monoton", "Fascinate Inline", "Graduate", "Uncial Antiqua", "Rye",
+            "Creepster", "Montez", "Crete Round", "Luckiest Guy", "Titan One", 
+
+            // 4. 手寫體 / 筆刷 / 藝術感 (Handwriting / Script)
+            "Pacifico", "Lobster", "Cookie", "Dancing Script", "Kaushan Script",
+            "Satisfy", "Great Vibes", "Sacramento", "Comforter", "Yellowtail",
+            "Permanent Marker", "Rock Salt", "Gochi Hand", "Caveat", "Shadows Into Light",
+            "Indie Flower", "Gloria Hallelujah", "Kalam", "Courgette", "Leckerli One",
+            
+            // 5. 特殊與單寬度字體 (Special & Monospace)
+            "Press Start 2P", "VT323", "Space Mono", "IBM Plex Mono", "Source Code Pro",
+            "Cousine", "Share Tech Mono", "Inconsolata", "Special Elite", "Chivo Mono", 
+            "Baloo 2", "Sniglet", "Bubblegum Sans", "Chewy", "Varela Round",
+            "Dosis", "Kodchasan", "Mali", "Itim", "Patrick Hand",
+
+            // 6. 其他高識別度字體 (High-Contrast Others)
+            "Zen Dots", "Unica One", "Seymour One", "Ruslan Display", "Cabin", 
+            "Nosifier", "Vibes", "Croissant One", "Emilys Candy", "Sarala" 
+        ];
+
+        // 狀態管理
+        const state = {
+            inputText: "", 
+            checkedFonts: new Set(), 
+            previewStatus: new Map() 
+        };
+
+        // DOM 元素
+        const fontListContainer = document.getElementById('font-list-container');
+        const displayArea = document.getElementById('display-area');
+        const charInput = document.getElementById('char-input');
+        const confirmBtn = document.getElementById('confirm-btn');
+        const selectAllCheckbox = document.getElementById('select-all-checkbox'); 
+
+        // 初始化：載入字體
+        function loadGoogleFonts() {
+            const batchSize = 20;
+            for (let i = 0; i < fonts.length; i += batchSize) {
+                const batch = fonts.slice(i, i + batchSize);
+                const fontString = batch.map(f => f.replace(/ /g, '+')).join('|');
+                const link = document.createElement('link');
+                link.href = `https://fonts.googleapis.com/css?family=${fontString}&display=swap`;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+        }
+        
+        // Helper: 更新全選/取消勾選欄位的狀態 (checked/indeterminate)
+        function updateSelectAllCheckboxState() {
+            if (!selectAllCheckbox) return; 
+
+            const checkedCount = state.checkedFonts.size;
+            selectAllCheckbox.checked = (checkedCount === fonts.length);
+            selectAllCheckbox.indeterminate = (checkedCount > 0 && checkedCount < fonts.length);
+        }
+
+
+        // 渲染左側列表
+        function renderSidebar() {
+            if (!fontListContainer) return; 
+            
+            fontListContainer.innerHTML = ''; 
+            
+            fonts.forEach(font => {
+                const div = document.createElement('div');
+                div.className = 'font-list-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = state.checkedFonts.has(font);
+                checkbox.dataset.font = font;
+
+                // 根據右側狀態，設定左側勾選框的灰色狀態
+                if (state.previewStatus.has(font) && !state.previewStatus.get(font)) {
+                    checkbox.classList.add('grayed-checkbox');
+                } else {
+                    checkbox.classList.remove('grayed-checkbox');
+                }
+                
+                // 監聽左側勾選：即時增減右側卡片
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        state.checkedFonts.add(font);
+                        state.previewStatus.set(font, true);
+                    } else {
+                        state.checkedFonts.delete(font);
+                        state.previewStatus.delete(font);
+                    }
+                    updateSelectAllCheckboxState(); 
+                    renderPreview(); 
+                });
+
+                const label = document.createElement('span');
+                label.textContent = font;
+                label.style.fontFamily = `"${font}", sans-serif`; 
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                fontListContainer.appendChild(div);
+            });
+            
+            updateSelectAllCheckboxState();
+        }
+
+        // 渲染右側預覽區
+        function renderPreview() {
+            displayArea.innerHTML = '';
+            
+            // 使用 state.inputText，如果為空則顯示為空白
+            const charToDisplay = state.inputText; 
+
+            fonts.forEach(font => {
+                if (!state.checkedFonts.has(font)) return;
+
+                if (!state.previewStatus.has(font)) {
+                    state.previewStatus.set(font, true);
+                }
+
+                const isActive = state.previewStatus.get(font);
+
+                const card = document.createElement('div');
+                card.className = `preview-card ${isActive ? '' : 'disabled'}`;
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'preview-checkbox';
+                checkbox.checked = isActive;
+                
+                // 監聽右側勾選：切換淡化狀態，並同步左側勾選欄位
+                checkbox.addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    state.previewStatus.set(font, isChecked);
+                    
+                    if (isChecked) {
+                        card.classList.remove('disabled');
+                    } else {
+                        card.classList.add('disabled');
+                    }
+                    
+                    const leftCheckbox = document.querySelector(`#font-list-container input[data-font="${font}"]`);
+                    if (leftCheckbox) {
+                        if (isChecked) {
+                            leftCheckbox.classList.remove('grayed-checkbox');
+                        } else {
+                            leftCheckbox.classList.add('grayed-checkbox');
+                        }
+                        updateSelectAllCheckboxState(); 
+                    }
+                });
+
+                const charDiv = document.createElement('div');
+                charDiv.className = 'preview-char';
+                charDiv.style.fontFamily = `"${font}", sans-serif`;
+                charDiv.textContent = charToDisplay; // 使用修正後的 charToDisplay
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'preview-name';
+                nameDiv.textContent = font;
+
+                card.appendChild(checkbox);
+                card.appendChild(charDiv);
+                card.appendChild(nameDiv);
+                displayArea.appendChild(card);
+            });
+        }
+
+        // 監聽文字輸入
+        charInput.addEventListener('input', (e) => {
+            const newText = e.target.value.substring(0, 2).toUpperCase(); 
+            state.inputText = newText;
+            e.target.value = newText; // 更新輸入框顯示為大寫
+            renderPreview(); 
+        });
+
+        
+        // 確認按鈕邏輯 
+        confirmBtn.addEventListener('click', () => {
+            let changeCount = 0;
+            
+            state.previewStatus.forEach((isActive, font) => {
+                if (!isActive) {
+                    state.checkedFonts.delete(font);
+                    state.previewStatus.delete(font); 
+                    changeCount++;
+                }
+            });
+
+            if (changeCount > 0) {
+                renderSidebar();
+                renderPreview();
+            }
+            updateSelectAllCheckboxState();
+            
+            // 傳送結果給父級視窗 (主頁面)
+            const selectedFontNames = Array.from(state.checkedFonts);
+            const selectedChars = state.inputText; 
+            
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: 'FONT_LIST_UPDATE',
+                    fonts: selectedFontNames,
+                    chars: selectedChars // 傳送當前輸入的 0-2 個字母
+                }, '*'); 
+            }
+        });
+
+        // 啟動程式
+        (function init() {
+            loadGoogleFonts();
+            renderSidebar();
+            renderPreview(); 
+            
+            if (selectAllCheckbox) {
+                 selectAllCheckbox.addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    
+                    if (isChecked) {
+                        // 全選：將所有字體加入選取集合，並設定為顯示狀態
+                        fonts.forEach(font => {
+                            state.checkedFonts.add(font);
+                            state.previewStatus.set(font, true);
+                        });
+                    } else {
+                        // 全部取消：清空選取集合
+                        state.checkedFonts.clear();
+                        state.previewStatus.clear();
+                    }
+
+                    renderSidebar(); 
+                    renderPreview();
+                });
+            }
+        })();
+
+    </script>
+</body>
+</html>
