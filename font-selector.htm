@@ -5,33 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DUET by BCAG - Font Selector</title>
     <style>
-        /* --- 基礎設定 & 紙張質感 --- */
+        /* --- 基礎設定 & 紙張質感 (Dark Mode) --- */
         :root {
-            --paper-color: #fdfbf7;
-            --text-color: #1a1a1a;
-            --accent-color: #000;
-            --border-color: #dcdad5;
+            --paper-color: #000000; /* 黑底 */
+            /* 修正: 文字顏色改為略深5%的米白灰 */
+            --text-color: #f0e8db; 
+            --accent-color: #f0e8db; 
+            --border-color: #333333; /* 深色邊框 */
         }
 
         body {
             margin: 0;
             padding: 0;
             font-family: 'Helvetica', 'Arial', sans-serif;
-            background-color: var(--paper-color);
+            /* 修正: 移除紋理，改為從中心點開始平滑漸層到全黑 */
+            background: radial-gradient(circle at center, #1A1A1A 0%, #000000 100%);
+            background-color: #000000; /* 備用底色 */
             color: var(--text-color);
-            /* 模擬水彩紙的粗糙紋理 */
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            
             height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* 防止整個頁面捲動 */
+            overflow: hidden; 
         }
 
         /* --- Header --- */
         header {
             text-align: center;
             padding: 20px 0 10px 0;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            /* 調整分隔線顏色為淺色 */
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
             flex-shrink: 0;
         }
 
@@ -43,7 +46,7 @@
         }
 
         .title-duet {
-            font-family: 'Helvetica', sans-serif; /* 模擬 DUET 粗體 */
+            font-family: 'Helvetica', sans-serif; 
             font-weight: 900;
             letter-spacing: -1px;
         }
@@ -51,7 +54,7 @@
         .title-bcag {
             font-family: "Big Caslon", "Book Antiqua", "Palatino Linotype", serif;
             font-weight: 400;
-            font-size: 1.25rem; /* 2.5rem 的一半 */
+            font-size: 1.25rem; 
         }
 
         .subtitle {
@@ -60,14 +63,15 @@
             margin-top: 5px;
             letter-spacing: 1px;
             text-transform: uppercase;
-            color: #555;
+            /* 調整顏色 */
+            color: #ccc; 
         }
 
         /* --- 主要佈局 --- */
         main {
             display: flex;
             flex: 1;
-            height: calc(100vh - 120px); /* 扣除 Header 高度 */
+            height: calc(100vh - 120px); 
             overflow: hidden;
         }
 
@@ -75,7 +79,8 @@
         #sidebar {
             width: 20%;
             min-width: 200px; 
-            background-color: rgba(255, 255, 255, 0.4);
+            /* 調整為半透明深色背景 */
+            background-color: rgba(10, 10, 10, 0.4); 
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
@@ -89,15 +94,23 @@
         }
 
         #char-input {
-            /* 字體尺寸已縮小到 1.0rem */
             font-size: 1.0rem;
             width: 90%;
             padding: 5px;
             text-align: center;
-            border: 1px solid #aaa;
+            /* 調整邊框顏色 */
+            border: 1px solid #555;
             background: transparent;
             font-family: 'Helvetica', sans-serif;
             text-transform: none;
+            /* 確保輸入文字為淺色 */
+            color: var(--text-color); 
+        }
+
+        /* 調整 placeholder 顏色以適應深色背景 */
+        #char-input::placeholder {
+            color: #888;
+            opacity: 1; 
         }
 
         /* 新增：全選/全部取消 區塊樣式 */
@@ -126,12 +139,14 @@
             display: flex;
             align-items: center;
             padding: 6px 3px;
-            border-bottom: 1px solid rgba(0,0,0,0.03);
+            /* 調整分隔線顏色 */
+            border-bottom: 1px solid rgba(255,255,255,0.03);
             cursor: pointer;
         }
 
         .font-list-item:hover {
-            background-color: rgba(0,0,0,0.02);
+            /* 調整 hover 顏色 */
+            background-color: rgba(255,255,255,0.05);
         }
 
         .font-list-item input[type="checkbox"] {
@@ -199,7 +214,8 @@
 
         .preview-name {
             font-size: 0.7rem;
-            color: #666;
+            /* 調整顏色 */
+            color: #ccc;
             font-family: 'Helvetica', sans-serif;
             text-align: center;
             margin-top: 5px;
@@ -219,17 +235,16 @@
 
         #confirm-btn {
             background-color: #000;
-            color: #fff;
-            border: none;
-            /* ⭐ 修正點: 尺寸縮小為一半 (1.5vw -> 0.75vw, 3vw -> 1.5vw) ⭐ */
-            padding: 0.9vw 1.8vw; 
-            /* ⭐ 修正點: 字體相對應縮小為一半 (1.2vw -> 0.6vw) ⭐ */
-            font-size: 0.8vw; 
+            color: var(--text-color); /* 輕微米黃灰 */
+            /* ⭐ 修正點: 加入與文字顏色相同的 1px 外框線 ⭐ */
+            border: 1px solid var(--text-color); 
+            padding: 0.75vw 1.5vw; 
+            font-size: 0.6vw; 
             
             font-family: 'Helvetica', sans-serif;
             letter-spacing: 1px;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4); 
             transition: transform 0.2s, background-color 0.2s;
             border-radius: 5px; 
         }
@@ -269,7 +284,6 @@
                 bottom: 20px;
                 right: 20px;
             }
-            /* ⭐ 修正點: 手機版尺寸也相應縮小 ⭐ */
             #confirm-btn {
                 padding: 6px 12px; 
                 font-size: 0.6rem;
